@@ -1,132 +1,150 @@
 "use client";
-import { useCallback, useState } from "react";
-import {
-  LockClosedIcon,
-  UserIcon,
-  UserPlusIcon,
-} from "@heroicons/react/24/outline";
-import { zKey } from "snarkjs";
-import { toast } from "react-toastify";
-import { useStytchUser } from "@stytch/react";
+
+import { useState } from "react";
+import useSWR from "swr";
+import { getFetcher } from "@/services/fetcher";
+import CreateCeremony from "@/components/CreateCeremony";
+import Link from "next/link";
+
+const ceremonies = [
+  {
+    id: 1,
+    label: "First Ceremony",
+    status: "On-Going",
+    totalCircuits: 4,
+    contributions: 2,
+    expectedContributions: 10,
+    startDate: "2021-05-01",
+    endDate: "2021-05-31",
+  },
+  // More people...
+];
 
 export default function Home() {
-  const { user } = useStytchUser();
-  const [name, setName] = useState(user.emails[0]?.email || "");
-  const [random, setRandom] = useState(
-    Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex")
+  const [openAddCeremony, setOpenAddCeremony] = useState(false);
+  const { data: ceremonies, isLoading } = useSWR(
+    "/api/v1/ceremonies",
+    getFetcher
   );
-  const [hash, setHash] = useState("");
 
-  const handleContribute = useCallback(async () => {
-    const out: Record<string, string> = { type: "mem" };
-
-    const hashes = [];
-    const promises = Array(10)
-      .fill(null)
-      .reduce((acc) => {
-        return acc.then((hash) => {
-          hashes.push(hash);
-          return zKey.contribute(
-            "/circuit_00.zkey",
-            { type: "mem" },
-            name,
-            random
-          );
-        });
-      }, zKey.contribute("/circuit_00.zkey", { type: "mem" }, name, random));
-    hashes.push(
-      await toast.promise(promises, {
-        pending: "Contributing...",
-        success: "Contributed!",
-        error: "Failed to contribute",
-      })
-    );
-    setHash(
-      hashes.map((hash) => formatHash(hash, "Contribution Hash: ")).join("\n\n")
-    );
-    // console.log(await zKey.exportVerificationKey(out), out.data);
-  }, [name, random]);
+  if (!ceremonies) return null;
 
   return (
     <>
-      <div className="flex flex-col gap-4 xl:flex-row">
-        <div className="w-80">
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium leading-6 text-gray-800"
-          >
-            Contributor Name
-          </label>
-          <div className="relative mt-2 rounded-md shadow-sm">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <UserIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-            </div>
-            <input
-              type="text"
-              name="name"
-              id="name"
-              className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-800 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-400 sm:text-sm sm:leading-6"
-              placeholder="Ryan Mehta"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h1 className="text-base font-semibold leading-6 text-gray-900">
+              Trusted Ceremonies
+            </h1>
+            <p className="mt-2 text-sm text-gray-700">
+              A list of all the groth16 phase2 trusted ceremonies in your
+              account.
+            </p>
+          </div>
+          <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+            <button
+              type="button"
+              className="block rounded-md bg-emerald-400 px-3 py-2 text-center text-sm font-semibold text-gray-100 shadow-sm hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+              onClick={() => setOpenAddCeremony(true)}
+            >
+              Add Ceremony
+            </button>
           </div>
         </div>
-
-        <div className="w-full md:w-[600px]">
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium leading-6 text-gray-800"
-          >
-            Random Entropy
-          </label>
-          <div className="relative mt-2 rounded-md shadow-sm">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <LockClosedIcon
-                className="h-5 w-5 text-gray-400"
-                aria-hidden="true"
-              />
+        <div className="mt-8 flow-root">
+          <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+            <div className="inline-block min-w-full py-2 align-middle">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-800 sm:pl-6 lg:pl-8"
+                    >
+                      Label
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-800"
+                    >
+                      Status
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-800"
+                    >
+                      Total Circuits
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-800"
+                    >
+                      Contributors
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-800"
+                    >
+                      Start Date
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-800"
+                    >
+                      End Date
+                    </th>
+                    <th
+                      scope="col"
+                      className="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8"
+                    >
+                      <span className="sr-only">View</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {ceremonies.map((ceremony) => (
+                    <tr key={ceremony.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-800 sm:pl-6 lg:pl-8">
+                        {ceremony.label}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {ceremony.status}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {ceremony.totalCircuits}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {ceremony.contributions} /{" "}
+                        {ceremony.expectedContributions}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {ceremony.startDate}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {ceremony.endDate}
+                      </td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8">
+                        <Link
+                          href={`/ceremonies/${ceremony.id}`}
+                          className="rounded bg-gray-800 p-2 text-gray-100 hover:text-gray-800"
+                        >
+                          View
+                          <span className="sr-only">, {ceremony.label}</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <input
-              type="text"
-              name="random"
-              id="random"
-              className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-800 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-400 sm:text-sm sm:leading-6"
-              value={random}
-              onChange={(e) => setRandom(e.target.value)}
-            />
           </div>
         </div>
       </div>
-      <button
-        type="button"
-        className="my-4 inline-flex items-center gap-x-2 rounded-md bg-emerald-400 px-3.5 py-2.5 text-center text-sm font-semibold text-gray-800 shadow-sm hover:bg-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:opacity-50"
-        onClick={handleContribute}
-        disabled={!name || !random}
-      >
-        <UserPlusIcon className="-ml-0.5 h-5 w-5" aria-hidden="true" />
-        Contribute
-      </button>
-
-      <pre className="my-4">{hash}</pre>
+      <CreateCeremony
+        open={openAddCeremony}
+        onClose={() => setOpenAddCeremony(false)}
+      />
     </>
   );
-}
-
-function formatHash(b, title) {
-  const a = new DataView(b.buffer, b.byteOffset, b.byteLength);
-  let S = "";
-  for (let i = 0; i < 4; i++) {
-    if (i > 0) S += "\n";
-    S += "\t\t";
-    for (let j = 0; j < 4; j++) {
-      if (j > 0) S += " ";
-      S += a
-        .getUint32(i * 16 + j * 4)
-        .toString(16)
-        .padStart(8, "0");
-    }
-  }
-  if (title) S = title + "\n" + S;
-  return S;
 }

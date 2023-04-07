@@ -1,10 +1,9 @@
 import { Menu } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
-import ConnectButton from "./ConnectButton";
-import { useStytchUser } from "@stytch/react";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function ProfileMenu() {
-  const { user } = useStytchUser();
+  const { user } = usePrivy();
 
   if (!user) {
     return null;
@@ -15,7 +14,7 @@ export default function ProfileMenu() {
       <span className="sr-only">Open user menu</span>
       <img
         className="h-8 w-8 rounded-full bg-gray-50"
-        src={`https://robohash.org/${user.emails[0].email}.png`}
+        src={`https://robohash.org/${user.email?.address}.png`}
         alt=""
       />
       <span className="hidden lg:flex lg:items-center">
@@ -23,8 +22,7 @@ export default function ProfileMenu() {
           className="ml-4 text-sm font-semibold leading-6 text-gray-900"
           aria-hidden="true"
         >
-          {`${user.name.first_name} ${user.name.last_name}` ||
-            user.emails[0].email}
+          {user.email?.address}
         </span>
         <ChevronDownIcon
           className="ml-2 h-5 w-5 text-gray-400"

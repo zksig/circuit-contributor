@@ -1,26 +1,23 @@
+"use client";
+
 import { useEffect } from "react";
 import ConnectButton from "./ConnectButton";
-import { useStytch, useStytchUser } from "@stytch/react";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function Main({ children }: { children: React.ReactNode }) {
-  const stytchClient = useStytch();
-  const { user, fromCache } = useStytchUser();
-  const params = new URLSearchParams(location.search);
-  const token = params.get("token");
-
-  console.log(user, fromCache);
+  const { ready, authenticated, login, user } = usePrivy();
 
   useEffect(() => {
-    if (!token) return;
-    (async () => {
-      await stytchClient.magicLinks.authenticate(token, {
-        session_duration_minutes: 60,
-      });
-      location.replace("/");
-    })();
-  }, [token]);
+    if (!ready || authenticated) return;
 
-  if (user) {
+    (async () => {
+      await login();
+    })();
+  }, [ready, authenticated]);
+
+  if (!user) return null;
+
+  if (user?.wallet) {
     return <>{children}</>;
   }
 

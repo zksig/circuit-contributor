@@ -7,12 +7,11 @@ import {
 } from "@heroicons/react/24/outline";
 import { zKey } from "snarkjs";
 import { toast } from "react-toastify";
-import { useAccount, useEnsName } from "wagmi";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function Home() {
-  const { address } = useAccount();
-  const { data } = useEnsName({ address });
-  const [name, setName] = useState(data || address);
+  const { user } = usePrivy();
+  const [name, setName] = useState(user.email?.address);
   const [random, setRandom] = useState(
     Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex")
   );

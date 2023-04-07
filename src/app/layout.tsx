@@ -3,38 +3,31 @@ import { Fragment, useState } from "react";
 import { Dialog, Menu, Transition } from "@headlessui/react";
 import {
   Bars3Icon,
-  CalendarIcon,
-  ChartPieIcon,
+  ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
-  DocumentDuplicateIcon,
-  FolderIcon,
-  HomeIcon,
-  UsersIcon,
+  UserGroupIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { StytchUIClient } from "@stytch/vanilla-js";
-import { StytchProvider } from "@stytch/react";
 import { ToastContainer } from "react-toastify";
 import Main from "@/components/Main";
 import ProfileMenu from "@/components/ProfileMenu";
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 const navigation = [
-  { name: "Dashboard", href: "#", icon: HomeIcon, current: true },
-  { name: "Team", href: "#", icon: UsersIcon, current: false },
-  { name: "Projects", href: "#", icon: FolderIcon, current: false },
-  { name: "Calendar", href: "#", icon: CalendarIcon, current: false },
-  { name: "Documents", href: "#", icon: DocumentDuplicateIcon, current: false },
-  { name: "Reports", href: "#", icon: ChartPieIcon, current: false },
+  { name: "Ceremonies", href: "/", icon: UserGroupIcon },
+  {
+    name: "Contributions",
+    href: "/contributions",
+    icon: ChatBubbleLeftRightIcon,
+    current: false,
+  },
 ];
 
-const userNavigation = [
-  { name: "Your profile", href: "#" },
-  { name: "Sign out", href: "#" },
-];
-
-const stytch = new StytchUIClient(process.env.NEXT_PUBLIC_STYTCH_TOKEN);
+const userNavigation = [];
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
@@ -45,20 +38,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathName = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <html>
-      <body>
-        <StytchProvider stytch={stytch}>
-          {/*
-        This example requires updating your template:
-
-        ```
-        <html class="h-full bg-white">
-        <body class="h-full">
-        ```
-      */}
+    <html className="h-full">
+      <body className="h-full">
+        <PrivyProvider appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID}>
           <div>
             <Transition.Root show={sidebarOpen} as={Fragment}>
               <Dialog
@@ -130,10 +116,10 @@ export default function RootLayout({
                               <ul role="list" className="-mx-2 space-y-1">
                                 {navigation.map((item) => (
                                   <li key={item.name}>
-                                    <a
+                                    <Link
                                       href={item.href}
                                       className={classNames(
-                                        item.current
+                                        item.href === pathName.slice(-1)
                                           ? "bg-gray-800 text-white"
                                           : "text-gray-800 hover:bg-gray-800 hover:text-white",
                                         "group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
@@ -144,7 +130,7 @@ export default function RootLayout({
                                         aria-hidden="true"
                                       />
                                       {item.name}
-                                    </a>
+                                    </Link>
                                   </li>
                                 ))}
                               </ul>
@@ -290,7 +276,7 @@ export default function RootLayout({
               </main>
             </div>
           </div>
-        </StytchProvider>
+        </PrivyProvider>
         <ToastContainer />
       </body>
     </html>
