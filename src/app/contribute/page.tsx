@@ -1,13 +1,14 @@
 "use client";
-import { useCallback, useState } from "react";
+
 import {
   LockClosedIcon,
   UserIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
-import { zKey } from "snarkjs";
-import { toast } from "react-toastify";
 import { usePrivy } from "@privy-io/react-auth";
+import { useCallback, useState } from "react";
+import { toast } from "react-toastify";
+import { zKey } from "snarkjs";
 
 export default function Home() {
   const { user } = usePrivy();

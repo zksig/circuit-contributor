@@ -1,5 +1,8 @@
 "use client";
-import { Fragment, useState } from "react";
+
+import "./globals.css";
+import Main from "@/components/Main";
+import ProfileMenu from "@/components/ProfileMenu";
 import { Dialog, Menu, Transition } from "@headlessui/react";
 import {
   Bars3Icon,
@@ -8,14 +11,12 @@ import {
   UserGroupIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { ToastContainer } from "react-toastify";
-import Main from "@/components/Main";
-import ProfileMenu from "@/components/ProfileMenu";
-import "./globals.css";
-import "react-toastify/dist/ReactToastify.css";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Fragment, useState } from "react";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const navigation = [
   { name: "Ceremonies", href: "/", icon: UserGroupIcon },

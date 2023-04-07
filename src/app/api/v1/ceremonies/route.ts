@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { checkSession } from "@/services/privy";
+import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 

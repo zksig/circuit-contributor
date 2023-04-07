@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { EnvelopeIcon } from "@heroicons/react/20/solid";
 import { usePrivy } from "@privy-io/react-auth";
+import { useState } from "react";
 
 export default function ConnectButton() {
   const { createWallet, linkWallet } = usePrivy();

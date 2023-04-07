@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import ConnectButton from "./ConnectButton";
 import { usePrivy } from "@privy-io/react-auth";
+import { useEffect } from "react";
 
 export default function Main({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, login, user } = usePrivy();

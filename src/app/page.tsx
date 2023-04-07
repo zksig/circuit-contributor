@@ -1,10 +1,10 @@
 "use client";
 
+import CreateCeremony from "@/components/CreateCeremony";
+import { getFetcher } from "@/services/fetcher";
+import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
-import { getFetcher } from "@/services/fetcher";
-import CreateCeremony from "@/components/CreateCeremony";
-import Link from "next/link";
 
 const ceremonies = [
   {
