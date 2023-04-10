@@ -1,8 +1,6 @@
+import { prisma } from "@/services/prisma";
 import { checkSession } from "@/services/privy";
-import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -11,13 +9,12 @@ export async function POST(request: Request) {
       return NextResponse.redirect("/login");
     }
 
-    const { label, startDate } = await request.json();
+    const { label } = await request.json();
 
     const ceremony = await prisma.ceremony.create({
       data: {
         managerEmail: email,
         label,
-        startDate: new Date(startDate),
       },
     });
     return NextResponse.json(ceremony);
@@ -37,6 +34,9 @@ export async function GET(request: Request) {
     const ceremonies = await prisma.ceremony.findMany({
       where: {
         managerEmail: email,
+      },
+      include: {
+        _count: true,
       },
     });
     return NextResponse.json(ceremonies);

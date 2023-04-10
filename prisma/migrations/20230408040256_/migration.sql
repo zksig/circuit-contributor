@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `Circuit` MODIFY `status` ENUM('WAITING', 'SETUP', 'FAILED', 'COMPLETE') NOT NULL DEFAULT 'WAITING',
+    MODIFY `r1csLocation` VARCHAR(191) NULL,
+    MODIFY `initialZKeyLocation` VARCHAR(191) NULL;

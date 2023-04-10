@@ -1,30 +1,98 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { usePrivy } from "@privy-io/react-auth";
-import { ErrorMessage, Formik } from "formik";
-import { useRouter } from "next/navigation";
+import { Formik } from "formik";
 import { Fragment } from "react";
+import { toast } from "react-toastify";
+import { zKey } from "snarkjs";
 
-export default function CreateCeremony({
+type FormValues = {
+  name: string;
+  maxConstraints: string;
+  r1cs: File;
+};
+
+const maxConstraintMap = {
+  "1M": 1000000,
+};
+
+export default function CreateCircuit({
+  ceremonyId,
   open,
   onClose,
 }: {
+  ceremonyId: string;
   open: boolean;
   onClose: () => void;
 }) {
-  const router = useRouter();
   const { getAccessToken } = usePrivy();
 
-  const handleSubmit = async ({ label }: { label: string }) => {
-    const res = await fetch("/api/v1/ceremonies", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${await getAccessToken()}`,
-      },
-      body: JSON.stringify({ label }),
-    });
-    const { id } = await res.json();
-    router.push(`/admin/ceremonies/${id}`);
+  const handleSubmit = async (
+    { name, maxConstraints, r1cs }: FormValues,
+    { setSubmitting }
+  ) => {
+    try {
+      const res = await fetch(`/api/v1/ceremonies/${ceremonyId}/circuits`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${await getAccessToken()}`,
+        },
+        body: JSON.stringify({
+          name,
+          maxConstraints: maxConstraintMap[maxConstraints],
+        }),
+      });
+
+      const ptauRes = await fetch(
+        "https://link.storjshare.io/s/juxgo6upkdurxue42li5qsezmpha/circuit-contributor/powersOfTau28_hez_final_20.ptau?download=1"
+      );
+
+      const ptauBuf = await toast.promise(ptauRes.arrayBuffer(), {
+        pending: "Fetching ptau...",
+        success: "Successfully fetched ptau",
+        error: "Unable to fetch ptau",
+      });
+
+      const zkey: Record<string, any> = { type: "mem" };
+      await toast.promise(
+        zKey.newZKey(
+          { type: "mem", data: Buffer.from(await r1cs.arrayBuffer()) },
+          { type: "mem", data: Buffer.from(ptauBuf) },
+          zkey
+        ),
+        {
+          pending: "Creating ZKey...",
+          success: "Successfully created ZKey",
+          error: "Unable to create ZKey",
+        }
+      );
+
+      const { circuit, uploadLink } = await res.json();
+      await toast.promise(
+        fetch(uploadLink, {
+          method: "PUT",
+          body: new Blob([zkey.data]),
+        }),
+        {
+          pending: "Uploading ZKey",
+          success: "Successfully uploaded ZKey",
+          error: "Unable to upload ZKey",
+        }
+      );
+
+      await fetch(`/api/v1/ceremonies/${ceremonyId}/circuits`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${await getAccessToken()}`,
+        },
+        body: JSON.stringify({
+          id: circuit.id,
+          status: "COMPLETE",
+        }),
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -46,15 +114,20 @@ export default function CreateCeremony({
               >
                 <Dialog.Panel className="pointer-events-auto w-screen max-w-2xl">
                   <Formik
-                    initialValues={{ label: "" }}
-                    validate={(values) => {
-                      const errors: Record<string, string> = {};
-                      if (!values.label) errors.label = "Required";
-                      return errors;
+                    initialValues={{
+                      name: "",
+                      maxConstraints: "1M",
+                      r1cs: null,
                     }}
                     onSubmit={handleSubmit}
                   >
-                    {({ values, handleChange, handleSubmit, isSubmitting }) => (
+                    {({
+                      values,
+                      handleChange,
+                      handleSubmit,
+                      setFieldValue,
+                      isSubmitting,
+                    }) => (
                       <form
                         className="flex h-full flex-col overflow-y-scroll bg-white shadow-xl"
                         onSubmit={handleSubmit}
@@ -65,11 +138,11 @@ export default function CreateCeremony({
                             <div className="flex items-start justify-between space-x-3">
                               <div className="space-y-1">
                                 <Dialog.Title className="text-base font-semibold leading-6 text-gray-900">
-                                  New Ceremony
+                                  Add Circuit
                                 </Dialog.Title>
                                 <p className="text-sm text-gray-500">
                                   Get started by filling in the information
-                                  below to create a new ceremony.
+                                  below to add your circuit.
                                 </p>
                               </div>
                               <div className="flex h-7 items-center">
@@ -93,25 +166,66 @@ export default function CreateCeremony({
                             <div className="space-y-2 px-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0 sm:px-6 sm:py-5">
                               <div>
                                 <label
-                                  htmlFor="label"
+                                  htmlFor="name"
                                   className="block text-sm font-medium leading-6 text-gray-900 sm:mt-1.5"
                                 >
-                                  Ceremony label
+                                  Circuit name
                                 </label>
                               </div>
                               <div className="sm:col-span-2">
                                 <input
                                   type="text"
-                                  name="label"
-                                  id="label"
+                                  name="name"
+                                  id="name"
                                   className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-400 sm:text-sm sm:leading-6"
-                                  value={values.label}
+                                  value={values.name}
                                   onChange={handleChange}
                                 />
-                                <ErrorMessage
-                                  name="label"
-                                  component="div"
-                                  className="mt-1 text-sm text-red-500"
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 px-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0 sm:px-6 sm:py-5">
+                              <div>
+                                <label
+                                  htmlFor="maxConstraints"
+                                  className="block text-sm font-medium leading-6 text-gray-900 sm:mt-1.5"
+                                >
+                                  Max Constraints
+                                </label>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <select
+                                  disabled
+                                  id="maxConstraints"
+                                  name="maxConstraints"
+                                  className="block w-full rounded-md border-0 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-400 sm:py-1.5 sm:text-sm sm:leading-6"
+                                  value={values.maxConstraints}
+                                  onChange={handleChange}
+                                >
+                                  <option value="1M">1M</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 px-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0 sm:px-6 sm:py-5">
+                              <div>
+                                <label
+                                  htmlFor="r1cs"
+                                  className="block text-sm font-medium leading-6 text-gray-900 sm:mt-1.5"
+                                >
+                                  R1CS
+                                </label>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <input
+                                  type="file"
+                                  id="r1cs"
+                                  name="r1cs"
+                                  className="block w-full rounded-md border-0 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-400 sm:py-1.5 sm:text-sm sm:leading-6"
+                                  // @ts-ignore
+                                  onChange={({ target }) => {
+                                    setFieldValue("r1cs", target.files[0]);
+                                  }}
                                 />
                               </div>
                             </div>

@@ -11,7 +11,7 @@ datasource db {
   relationMode = "prisma"
 }
 
-enum Status {
+enum CeremonyStatus {
   PREPARING
   INVITING
   PENDING
@@ -20,12 +20,75 @@ enum Status {
   CANCELLED
 }
 
+enum CircuitStatus {
+  SETUP
+  FAILED
+  COMPLETE
+}
+
 model Ceremony {
-  id            String    @id @default(uuid())
+  id            String            @id @default(uuid())
   managerEmail  String
   label         String
-  status        Status    @default(PREPARING)
-  startDate     DateTime
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  status        CeremonyStatus    @default(PREPARING)
+
+  circuits      Circuit[]
+  contributors  Contributor[]
+  contributions Contribution[]
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model Circuit {
+  id                  String          @id @default(uuid())
+
+  name                String
+  status              CircuitStatus   @default(SETUP)
+  ceremonyId          String
+  ceremory            Ceremony        @relation(fields: [ceremonyId], references: [id])
+  ptauLocation        String
+  maxConstraints      Int
+  initialZKeyLocation String?
+  finalZKeyLocation   String?
+
+  contributors        Contribution[]
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model Contribution {
+  id                String         @id @default(uuid())
+
+  ceremonyId        String
+  ceremony          Ceremony       @relation(fields: [ceremonyId], references: [id])
+
+  circuitId         String
+  circuit           Circuit        @relation(fields: [circuitId], references: [id])
+
+  email             String
+  name              String
+  zkeyLocation      String
+  hash              String
+  sequenceNumber    Int
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([sequenceNumber, circuitId])
+}
+
+model Contributor {
+  id          String  @id @default(uuid())
+
+  ceremonyId  String
+  ceremony    Ceremony       @relation(fields: [ceremonyId], references: [id])
+
+  email       String
+  name        String
+
+  createdAt   DateTime       @default(now())
+
+  @@unique([ceremonyId, email])
 }
