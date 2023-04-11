@@ -1,38 +1,91 @@
 "use client";
 
 import CircuitTable from "@/components/CircuitTable";
-import ContributorsTable from "@/components/ContributorsTable";
 import { getFetcher } from "@/services/fetcher";
-import { Tab } from "@headlessui/react";
 import {
   CpuChipIcon,
   UserPlusIcon,
   UsersIcon,
 } from "@heroicons/react/20/solid";
+import { Contributor } from "@prisma/client";
 import { usePrivy } from "@privy-io/react-auth";
+import { MD5 } from "crypto-js";
+import moment from "moment";
 import { useParams } from "next/navigation";
-import { Fragment, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "react-toastify";
 import { zKey } from "snarkjs";
 import useSWR from "swr";
 
-function classNames(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
+const ContributorTimeline = ({
+  contributors,
+  onSelectContributor,
+}: {
+  contributors: Contributor[];
+  onSelectContributor: (contributor: Contributor) => void;
+}) => (
+  <div className="mt-6 flow-root w-full">
+    <ul role="list" className="-mb-8">
+      {contributors.map((contributor, i) => (
+        <li
+          key={contributor.id}
+          onClick={() => onSelectContributor(contributor)}
+        >
+          <div className="relative pb-8">
+            {i !== contributors.length - 1 ? (
+              <span
+                className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200"
+                aria-hidden="true"
+              />
+            ) : null}
+            <div className="relative flex space-x-3 items-center">
+              <div>
+                <img
+                  src={`https://www.gravatar.com/avatar/${MD5(
+                    contributor.email
+                  )}?d=robohash`}
+                  className="h-8 w-8 rounded-full bg-gray-50"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Contribution by {contributor.name}
+                  </p>
+                </div>
+                <div className="whitespace-nowrap text-right text-sm text-gray-500">
+                  <time dateTime={contributor.createdAt.toString()}>
+                    {moment(contributor.createdAt).format("MMM DD")}
+                  </time>
+                </div>
+              </div>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
 
 export default function Contribute() {
   const { id } = useParams();
   const { data: ceremony } = useSWR(`/api/v1/ceremonies/${id}`, getFetcher);
+  const { data: contributions } = useSWR(
+    `/api/v1/ceremonies/${id}/contributions`,
+    getFetcher
+  );
   const { data: circuits } = useSWR(
     `/api/v1/ceremonies/${id}/circuits`,
     getFetcher
   );
-  const { data: contributors } = useSWR(
+  const { data: contributors, mutate } = useSWR(
     `/api/v1/ceremonies/${id}/contributors`,
     getFetcher
   );
   const { user, getAccessToken } = usePrivy();
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedContributor, setSelectedContributor] = useState<Contributor>();
 
   const name = user.email?.address || user.google?.email;
   const hasContributed = !!contributors?.find(
@@ -103,21 +156,26 @@ export default function Contribute() {
         }
       );
 
-      await fetch(`/api/v1/ceremonies/${id}/contributors`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${await getAccessToken()}`,
-        },
-        body: JSON.stringify({
-          name,
-        }),
-      });
+      const contributorRes = await fetch(
+        `/api/v1/ceremonies/${id}/contributors`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${await getAccessToken()}`,
+          },
+          body: JSON.stringify({
+            name,
+          }),
+        }
+      );
+      setSelectedContributor(await contributorRes.json());
+      await mutate();
     } finally {
       setIsLoading(false);
     }
   }, [circuits, user, getAccessToken, id]);
 
-  if (!circuits || !ceremony) return null;
+  if (!circuits || !ceremony || !contributions || !contributors) return null;
 
   return (
     <>
@@ -163,68 +221,32 @@ export default function Contribute() {
         </div>
       </div>
 
-      <Tab.Group>
-        <Tab.List className="my-4 gap-4 flex">
-          <Tab as={Fragment}>
-            {({ selected }) => (
-              <a
-                href="#"
-                className={classNames(
-                  selected
-                    ? "border-emerald-400 text-emerald-500 font-bold"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
-                  "group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium"
-                )}
-                aria-current={selected ? "page" : undefined}
-              >
-                <UsersIcon
-                  className={classNames(
-                    selected
-                      ? "text-emerald-400"
-                      : "text-gray-400 group-hover:text-gray-500",
-                    "-ml-0.5 mr-2 h-5 w-5"
-                  )}
-                  aria-hidden="true"
-                />
-                <span>Contributions</span>
-              </a>
-            )}
-          </Tab>
-          <Tab as={Fragment}>
-            {({ selected }) => (
-              <a
-                href="#"
-                className={classNames(
-                  selected
-                    ? "border-emerald-400 text-emerald-500 font-bold"
-                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
-                  "group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium"
-                )}
-                aria-current={selected ? "page" : undefined}
-              >
-                <CpuChipIcon
-                  className={classNames(
-                    selected
-                      ? "text-emerald-400"
-                      : "text-gray-400 group-hover:text-gray-500",
-                    "-ml-0.5 mr-2 h-5 w-5"
-                  )}
-                  aria-hidden="true"
-                />
-                <span>Circuits</span>
-              </a>
-            )}
-          </Tab>
-        </Tab.List>
-        <Tab.Panels>
-          <Tab.Panel>
-            <ContributorsTable ceremonyId={id} />
-          </Tab.Panel>
-          <Tab.Panel>
-            <CircuitTable ceremonyId={id} readOnly />
-          </Tab.Panel>
-        </Tab.Panels>
-      </Tab.Group>
+      <div className="border-b border-gray-200 pb-5 mt-6">
+        <h3 className="text-base font-semibold leading-6 text-gray-900">
+          Contributions
+        </h3>
+      </div>
+      <div className="flex gap-1 grid-cols-2 mt-4">
+        <pre className="w-full">
+          {contributions
+            .filter(
+              (contribution) =>
+                contribution.email ===
+                (selectedContributor?.email ?? contributions[0]?.email)
+            )
+            .map((contribution) =>
+              formatHash(
+                Buffer.from(contribution.hash, "hex"),
+                contribution.circuit.name
+              )
+            )
+            .join("\n\n")}
+        </pre>
+        <ContributorTimeline
+          contributors={contributors}
+          onSelectContributor={setSelectedContributor}
+        />
+      </div>
     </>
   );
 }

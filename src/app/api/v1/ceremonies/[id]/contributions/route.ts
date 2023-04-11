@@ -18,7 +18,6 @@ export async function POST(request: Request, { params }) {
     const ceremony = await prisma.ceremony.findFirst({
       where: {
         id: params.id,
-        managerEmail: email,
       },
     });
     if (!ceremony) throw new Error("Missing ceremony");
@@ -71,8 +70,10 @@ export async function GET(request: Request, { params }) {
         ceremonyId: params.id,
         circuitId: searchParams.get("circuitId") ?? undefined,
       },
+      include: {
+        circuit: true,
+      },
       orderBy: { createdAt: "desc" },
-      
     });
 
     return NextResponse.json(contributors);

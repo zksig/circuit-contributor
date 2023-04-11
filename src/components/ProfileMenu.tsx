@@ -1,6 +1,7 @@
 import { Menu } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
 import { usePrivy } from "@privy-io/react-auth";
+import { MD5 } from "crypto-js";
 
 export default function ProfileMenu() {
   const { user } = usePrivy();
@@ -14,7 +15,9 @@ export default function ProfileMenu() {
       <span className="sr-only">Open user menu</span>
       <img
         className="h-8 w-8 rounded-full bg-gray-50"
-        src={`https://robohash.org/${user.email?.address}.png`}
+        src={`https://www.gravatar.com/avatar/${MD5(
+          user.email?.address || user.google?.email
+        )}?d=robohash`}
         alt=""
       />
       <span className="hidden lg:flex lg:items-center">
