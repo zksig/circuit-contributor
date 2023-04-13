@@ -1,6 +1,6 @@
 "use client";
 
-import CircuitTable from "@/components/CircuitTable";
+import ContributeModal from "@/components/ContributeModal";
 import { getFetcher } from "@/services/fetcher";
 import {
   CpuChipIcon,
@@ -85,6 +85,7 @@ export default function Contribute() {
   );
   const { user, getAccessToken } = usePrivy();
   const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const [selectedContributor, setSelectedContributor] = useState<Contributor>();
 
   const name = user.email?.address || user.google?.email;
@@ -92,88 +93,92 @@ export default function Contribute() {
     (contributor) => contributor.email === name
   );
 
-  const handleContribute = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const random = Buffer.from(
-        crypto.getRandomValues(new Uint8Array(32))
-      ).toString("hex");
+  const handleContribute = useCallback(
+    async (name: string, random: string) => {
+      try {
+        setIsLoading(true);
 
-      await toast.promise(
-        Promise.all(
-          circuits.map(async (circuit) => {
-            const out: Record<string, string> = { type: "mem" };
+        await toast.promise(
+          Promise.all(
+            circuits.map(async (circuit) => {
+              const out: Record<string, string> = { type: "mem" };
 
-            const res = await fetch(
-              `/api/v1/ceremonies/${id}/contributions?circuitId=${circuit.id}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${await getAccessToken()}`,
-                },
-              }
-            );
-            const contributors = await res.json();
-            const latestContributor = contributors[0];
+              const res = await fetch(
+                `/api/v1/ceremonies/${id}/contributions?circuitId=${circuit.id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${await getAccessToken()}`,
+                  },
+                }
+              );
+              const contributors = await res.json();
+              const latestContributor = contributors[0];
 
-            const hash = await zKey.contribute(
-              `https://link.storjshare.io/s/jxa45axfvthgxrw3bz24uskxcvzq/circuit-contributor/${
-                latestContributor?.zkeyLocation ?? circuit.initialZKeyLocation
-              }?download=1`,
-              out,
+              const hash = await zKey.contribute(
+                `https://link.storjshare.io/s/jxa45axfvthgxrw3bz24uskxcvzq/circuit-contributor/${
+                  latestContributor?.zkeyLocation ?? circuit.initialZKeyLocation
+                }?download=1`,
+                out,
+                name,
+                random
+              );
+
+              const contributeRes = await fetch(
+                `/api/v1/ceremonies/${id}/contributions`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${await getAccessToken()}`,
+                  },
+                  body: JSON.stringify({
+                    circuitId: circuit.id,
+                    name,
+                    hash: Buffer.from(hash).toString("hex"),
+                    sequenceNumber:
+                      (latestContributor?.sequenceNumber ?? 0) + 1,
+                  }),
+                }
+              );
+              const { uploadLink } = await contributeRes.json();
+
+              await fetch(uploadLink, {
+                method: "PUT",
+                body: new Blob([out.data]),
+              });
+
+              return formatHash(hash, circuit.name);
+            })
+          ),
+          {
+            pending: "Contributing...",
+            success: "Thanks for your contribution",
+            error: "Unable to contribute",
+          }
+        );
+
+        const contributorRes = await fetch(
+          `/api/v1/ceremonies/${id}/contributors`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${await getAccessToken()}`,
+            },
+            body: JSON.stringify({
               name,
-              random
-            );
-
-            const contributeRes = await fetch(
-              `/api/v1/ceremonies/${id}/contributions`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${await getAccessToken()}`,
-                },
-                body: JSON.stringify({
-                  circuitId: circuit.id,
-                  name,
-                  hash: Buffer.from(hash).toString("hex"),
-                  sequenceNumber: (latestContributor?.sequenceNumber ?? 0) + 1,
-                }),
-              }
-            );
-            const { uploadLink } = await contributeRes.json();
-
-            await fetch(uploadLink, {
-              method: "PUT",
-              body: new Blob([out.data]),
-            });
-
-            return formatHash(hash, circuit.name);
-          })
-        ),
-        {
-          pending: "Contributing...",
-          success: "Thanks for your contribution",
-          error: "Unable to contribute",
-        }
-      );
-
-      const contributorRes = await fetch(
-        `/api/v1/ceremonies/${id}/contributors`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${await getAccessToken()}`,
-          },
-          body: JSON.stringify({
-            name,
-          }),
-        }
-      );
-      setSelectedContributor(await contributorRes.json());
-      await mutate();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [circuits, user, getAccessToken, id]);
+            }),
+          }
+        );
+        setSelectedContributor(await contributorRes.json());
+        await mutate();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+        setOpen(false);
+      }
+    },
+    [circuits, user, getAccessToken, id]
+  );
 
   if (!circuits || !ceremony || !contributions || !contributors) return null;
 
@@ -208,7 +213,7 @@ export default function Contribute() {
                 type="button"
                 disabled={isLoading}
                 className="inline-flex gap-2 items-center rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:opacity-25"
-                onClick={handleContribute}
+                onClick={() => setOpen(true)}
               >
                 <UserPlusIcon
                   className="-ml-0.5 mr-1.5 h-5 w-5"
@@ -247,6 +252,12 @@ export default function Contribute() {
           onSelectContributor={setSelectedContributor}
         />
       </div>
+      <ContributeModal
+        open={open}
+        loading={isLoading}
+        onClose={() => setOpen(false)}
+        onContribute={handleContribute}
+      />
     </>
   );
 }
