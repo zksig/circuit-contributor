@@ -10,6 +10,7 @@ type FormValues = {
   name: string;
   maxConstraints: string;
   r1cs: File;
+  wasm: File;
 };
 
 const maxConstraintMap = {
@@ -28,7 +29,7 @@ export default function CreateCircuit({
   const { getAccessToken } = usePrivy();
 
   const handleSubmit = async (
-    { name, maxConstraints, r1cs }: FormValues,
+    { name, maxConstraints, r1cs, wasm }: FormValues,
     { setSubmitting }
   ) => {
     try {
@@ -67,12 +68,23 @@ export default function CreateCircuit({
         }
       );
 
-      const { circuit, uploadLink } = await res.json();
+      const { circuit, r1csUploadLink, wasmUploadLink, zkeyUploadLink } =
+        await res.json();
       await toast.promise(
-        fetch(uploadLink, {
-          method: "PUT",
-          body: new Blob([zkey.data]),
-        }),
+        Promise.all([
+          fetch(r1csUploadLink, {
+            method: "PUT",
+            body: r1cs,
+          }),
+          fetch(wasmUploadLink, {
+            method: "PUT",
+            body: wasm,
+          }),
+          fetch(zkeyUploadLink, {
+            method: "PUT",
+            body: new Blob([zkey.data]),
+          }),
+        ]),
         {
           pending: "Uploading ZKey",
           success: "Successfully uploaded ZKey",
@@ -118,6 +130,7 @@ export default function CreateCircuit({
                       name: "",
                       maxConstraints: "1M",
                       r1cs: null,
+                      wasm: null,
                     }}
                     onSubmit={handleSubmit}
                   >
@@ -225,6 +238,29 @@ export default function CreateCircuit({
                                   // @ts-ignore
                                   onChange={({ target }) => {
                                     setFieldValue("r1cs", target.files[0]);
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 px-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0 sm:px-6 sm:py-5">
+                              <div>
+                                <label
+                                  htmlFor="wasm"
+                                  className="block text-sm font-medium leading-6 text-gray-900 sm:mt-1.5"
+                                >
+                                  WASM
+                                </label>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <input
+                                  type="file"
+                                  id="wasm"
+                                  name="wasm"
+                                  className="block w-full rounded-md border-0 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-emerald-400 sm:py-1.5 sm:text-sm sm:leading-6"
+                                  // @ts-ignore
+                                  onChange={({ target }) => {
+                                    setFieldValue("wasm", target.files[0]);
                                   }}
                                 />
                               </div>

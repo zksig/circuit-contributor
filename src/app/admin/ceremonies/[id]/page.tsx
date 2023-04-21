@@ -39,7 +39,6 @@ export default function CeremonyDetails() {
       Promise.all(
         contributions.map(async (contribution) => {
           const out: Record<string, string> = { type: "mem" };
-          console.log(contribution.zkeyLocation);
           await zKey.beacon(
             `https://link.storjshare.io/s/jxa45axfvthgxrw3bz24uskxcvzq/circuit-contributor/${contribution.zkeyLocation}?download=1`,
             out,
@@ -47,6 +46,8 @@ export default function CeremonyDetails() {
             "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
             10
           );
+
+          const vkey = await zKey.exportVerificationKey(out);
 
           const res = await fetch(`/api/v1/ceremonies/${id}/circuits`, {
             method: "PUT",
@@ -57,11 +58,17 @@ export default function CeremonyDetails() {
               circuitId: contribution.circuitId,
             }),
           });
-          const { uploadLink } = await res.json();
-          await fetch(uploadLink, {
-            method: "PUT",
-            body: new Blob([out.data]),
-          });
+          const { zkeyUploadLink, vkeyUploadLink } = await res.json();
+          await Promise.all([
+            fetch(zkeyUploadLink, {
+              method: "PUT",
+              body: new Blob([out.data]),
+            }),
+            fetch(vkeyUploadLink, {
+              method: "PUT",
+              body: new Blob([Buffer.from(JSON.stringify(vkey))]),
+            }),
+          ]);
         })
       ),
       {

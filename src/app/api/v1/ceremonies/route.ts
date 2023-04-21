@@ -5,10 +5,6 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const { email } = await checkSession(request);
-    if (!email) {
-      return NextResponse.redirect("/login");
-    }
-
     const { label } = await request.json();
 
     const ceremony = await prisma.ceremony.create({
@@ -20,17 +16,13 @@ export async function POST(request: Request) {
     return NextResponse.json(ceremony);
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: e.message });
+    return NextResponse.json({ error: e.message }, { status: e.status });
   }
 }
 
 export async function GET(request: Request) {
   try {
     const { email } = await checkSession(request);
-    if (!email) {
-      return NextResponse.redirect("/login");
-    }
-
     const ceremonies = await prisma.ceremony.findMany({
       where: {
         managerEmail: email,
@@ -42,6 +34,6 @@ export async function GET(request: Request) {
     return NextResponse.json(ceremonies);
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: e.message });
+    return NextResponse.json({ error: e.message }, { status: e.status });
   }
 }

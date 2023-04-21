@@ -1,3 +1,4 @@
+import HttpError from "@/utils/HttpError";
 import { PrivyClient } from "@privy-io/server-auth";
 
 const privy = new PrivyClient(
@@ -8,14 +9,18 @@ const privy = new PrivyClient(
 export const checkSession = async (request: Request) => {
   const token = request.headers.get("authorization")?.replace(/bearer /i, "");
   if (!token) {
-    throw new Error("Missing authorization token");
+    throw new HttpError("Missing authorization token", 401);
   }
 
-  const { userId } = await privy.verifyAuthToken(token);
-  const { email, google } = await privy.getUser(userId);
+  try {
+    const { userId } = await privy.verifyAuthToken(token);
+    const { email, google } = await privy.getUser(userId);
 
-  return {
-    email: email?.address || google?.email,
-    id: userId,
-  };
+    return {
+      email: email?.address || google?.email,
+      id: userId,
+    };
+  } catch (e) {
+    throw new HttpError(`Invalid Token: ${e}`, 401);
+  }
 };

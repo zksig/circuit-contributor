@@ -48,8 +48,12 @@ model Circuit {
   ceremory            Ceremony        @relation(fields: [ceremonyId], references: [id])
   ptauLocation        String
   maxConstraints      Int
+
+  r1csLocation        String?
+  wasmLocation        String?
   initialZKeyLocation String?
-  finalZKeyLocation   String?
+  zkeyLocation        String?
+  vkeyLocation        String?
 
   contributors        Contribution[]
 

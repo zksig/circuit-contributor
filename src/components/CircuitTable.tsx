@@ -44,6 +44,12 @@ export default function CircuitTable({
                       scope="col"
                       className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
                     >
+                      ID
+                    </th>
+                    <th
+                      scope="col"
+                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
+                    >
                       Name
                     </th>
                     <th
@@ -63,6 +69,9 @@ export default function CircuitTable({
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {circuits.map((circuit) => (
                     <tr key={circuit.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                        {circuit.id}
+                      </td>
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
                         {circuit.name}
                       </td>
